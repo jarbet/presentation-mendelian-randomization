@@ -1,0 +1,391 @@
+---
+title: 'Mendelian Randomization in R'
+author: "[Jaron Arbet]{style='color: #4682B4;'}"
+subtitle: 'Causal inference in observational studies'
+date: '2025-07-25'
+format:
+  revealjs:
+    incremental: true
+scrollable: TRUE
+slide-number: c/t
+bibliography: references.bib
+embed-resources: true
+execute:
+    cache: false
+---
+
+```{r setup}
+library(BoutrosLab.plotting.general);
+library(fontawesome);
+library(gtsummary);
+seed <- 1234;
+options(scipen = 999);
+
+colorize <- function(x, color = '#4682B4') {
+#3 https://bookdown.org/yihui/rmarkdown-cookbook/font-color.html#using-an-r-function-to-write-raw-html-or-latex-code
+if (knitr::is_latex_output()) {
+    sprintf("\\textcolor{%s}{%s}", color, x)
+    } else if (knitr::is_html_output()) {
+    sprintf("<span style='color: %s;'>%s</span>", color, x)
+    } else x
+    }
+```
+
+## Background
+
+-   **`r colorize('Goal')`**: causal inference for exposure and outcome in observational study
+
+-   **`r colorize('Problem')`**: there are unmeasured confounders:
+
+    ![](images/clipboard-852610954.png){.nostretch width='400px' height='400px' fig-align="center"}
+
+## Instrumental Variable Analysis (IVA)
+
+-   Method for doing causal inference in observational study
+-   Mendelian Randomization is a particular form of **`IVA`** where IVs are germline genetic variant(s)
+
+. . .
+
+**3 Conditions of an IV**:
+
+1.  IV is associated with the exposure
+
+    ![](images/clipboard-3775774296.png)
+
+2.  No unmeasured confounders of the IV-outcome relationship
+
+    ![](images/clipboard-3221565394.png)
+
+3.  IV does not affect the outcome other than through the exposure and does not affect any other trait that has a downstream effect on the outcome of interest.
+
+    ![](images/clipboard-306865851.png)
+
+. . .
+
+Finally, MR makes one more assumption:
+
+4.  Changes in the genetic IV have equivalent effects to changes in the exposure through environmental or drug intervention: **`r colorize('gene–environment equivalence')`**
+
+<ul style="margin: 0; padding: 0; line-height: 1; font-size: 14px;">
+
+Sanderson, Eleanor, et al. "Mendelian randomization." Nature reviews Methods primers 2.1 (2022): 6.
+
+</ul>
+
+## Intuition
+
+-   If the genetic variant(s) $G$ cause the exposure ($G \rightarrow X$) and cause the outcome only through the ($G \rightarrow X \rightarrow Y$), then the exposure has a causal effect on the the outcome!
+
+-   The above holds even if there are unmeasured confounders ($U$) of $X$-$Y$ relationship
+
+<!-- -->
+
+-   The key to "**`r colorize('causal')`**" is the fact that the **`r colorize('genetic variant(s) are randomly assigned at conception')`**, so they are not confounded by other factors that may affect the exposure and outcome.. similar to RCT.
+
+    ![](images/clipboard-1219680820.png)
+
+<ul style="margin: 0; padding: 0; line-height: 1; font-size: 14px;">
+
+Go, Tae-Hwa, and Dae Ryong Kang. "Basic concepts of a mendelian randomization approach." *Cardiovascular Prevention and Pharmacotherapy* 2.1 (2020): 24-30
+
+</ul>
+
+## Relation to RCT
+
+![](images/clipboard-3387390430.png)
+
+<ul style="margin: 0; padding: 0; line-height: 1; font-size: 14px;">
+
+Sanderson, Eleanor, et al. "Mendelian randomization." *Nature reviews Methods primers* 2.1 (2022): 6.
+
+</ul>
+
+## Data used for MR
+
+1.  **`r colorize('Patient-level data')`**
+
+-   If you have patient-level genetic, exposure & outcome data, then you can use a simple 2-stage regression approach
+
+2.  **`r colorize('Summary-level data')`**:
+
+-   GWAS summary stats (regression coefficient and standard error) are publicly available for thousands of phenotypes
+-   If you can find GWAS summary stats for a set of variants associated with your exposure and corresponding summary stats for association with outcome, then you can use a meta-analysis approach to estimate the causal effect
+
+# MR with patient-level data: `r colorize('2-stage regression')`
+
+## 2-stage regression
+
+-   $X$: exposure
+-   $Y$: outcome
+-   $Z$: genetic variant(s) (instrumental variable)
+-   $L$: optional covariates to improve precision
+
+1.  **Model to predict exposure**
+
+. . .
+
+$$
+X = \pi_0 + \pi_{Z}Z + \pi_{L}L +  \epsilon_X
+$$
+
+&emsp; Obtain predicted exposure $\hat{X}$
+
+2. **Model to predict outcome**
+
+. . .
+
+$$
+Y = \beta_0 + \beta_X\hat{X} + \beta_{L}L + \epsilon_Y
+$$
+
+-   $\hat{\beta}_X$ is the estimated causal effect of the exposure on the outcome. If $\beta_X$ p-value \< 0.05, then evidence for a causal association between $X$ and $Y$.
+
+-   Can't use traditional standard errors/CIs/pvalues. Modified versions are used to account for the uncertainty in $\hat{X}$.
+
+-   The above approach is unbiased for linear regression but biased for non-linear regression (*e.g.* logistic reg or CoxPH). Bias adjustments have been developed for these models.
+
+## Example
+
+-   Study for the effect of Vitamin D on mortality [@vitD]
+-   ivtools R package [@ivtools]
+
+. . .
+
+```{r}
+#| echo: TRUE
+library(survival);
+library(ivtools);
+data(VitD);
+VitD$vitd.zscore <- as.numeric(scale(VitD$vitd));
+head(VitD);
+```
+
+-   `age`: age at baseline
+-   `filaggrin`: binary indicator of whether the subject has mutations in the filaggrin gene
+-   `vitd.zscore`: z-score of baseline vitamin D level
+-   `time`: followup time (years)
+-   `death`: whether the subject died during follow-up
+
+## 2-stage regression models
+
+. . .
+
+Notation:
+
+-   **Exposure model** (`fitX.LZ`): predict exposure `X` with instrumental variable(s) `Z` and covariates `L`
+-   **Outcome model** (`fitT.LX`): predict time-to-event outcome `T` with exposure `X` and covariates `L`
+
+1.  **Exposure model**:
+
+. . .
+
+```{r}
+#| echo: true
+fitX.LZ <- glm(
+    formula = vitd.zscore ~ age + filaggrin,
+    data = VitD,
+    family = gaussian
+    );
+gtsummary::tbl_regression(fitX.LZ);
+```
+
+-   The genetic instrumental variable is significantly associated with the exposure (vitamin D)
+
+2.  **Outcome model**:
+
+. . .
+
+```{r}
+#| echo: true
+fitT.LX <- coxph(
+    formula = Surv(time, death) ~ age + vitd.zscore,
+    data = VitD
+    );
+gtsummary::tbl_regression(fitT.LX , exponentiate = TRUE);
+```
+
+-   The exposure (vitamin D) is significantly associated with the outcome (mortality), however, there may be unobserved confounders $\rightarrow$ we will use IVA to try and deal with this.
+
+3.  Combine the exposure and outcome models to estimate the causal effect:
+
+-   Since we have a time-to-event outcome, use `ivcoxph()`. For continuous or binary outcomes, use `ivglm()`.
+
+. . .
+
+```{r}
+#| echo: true
+
+fit.iva <- ivtools::ivcoxph(
+    estmethod = 'ts',
+    fitX.LZ = fitX.LZ,
+    fitT.LX = fitT.LX,
+    data = VitD,
+    ctrl = TRUE # reduced bias
+    );
+
+# Make table of results
+tab <- data.frame(summary(fit.iva)$coef, check.names = FALSE);
+tab$HR <- round(exp(tab$Estimate), 2);
+tab$pvalue <- ifelse(tab$`Pr(>|z|)` < 0.001, '<0.001', round(tab$`Pr(>|z|)`, 3));
+ci <- round(exp(confint(fit.iva)), 2);
+tab <- cbind(tab, ci);
+tab$feature <- rownames(tab);
+
+gt::gt(tab[, c('feature', 'HR', '2.5 %', '97.5 %', 'pvalue')]);
+
+```
+
+-   A 1 standard deviation increase in vitamin D is causally associated with `r tab['vitd.zscore', 'HR']` times less risk of death (95% CI: `r tab['vitd.zscore', '2.5 %']` to `r tab['vitd.zscore', '97.5 %']`, p = `r tab['vitd.zscore', 'pvalue']`).
+
+# MR with summary data: `r colorize('meta-analysis approach')`
+
+## How do we choose genetic instrumental variables?
+
+-   Identify GWAS SNPs from public databases that are associated with the exposure ($p < 5.0 * 10^{–8}$)
+-   Using public databases, we can obtain regression coefficients and standard errors for the set of genetic IVs for their association with the exposure ($X$) and outcome ($Y$)
+-   Then we can use "inverse variance weighting" (**`r colorize('IVW')`**) meta analysis methods to combine all the info and estimate the causal effect of $X$ on $Y$
+
+## Inverse Variance Weighting (IVW) meta analysis method
+
+. . . 
+
+[@natureMR]:
+
+. . .
+
+![](images/clipboard-237021238.png){height=640px width=480px .nostretch fig-align="center"}
+
+* The `MendelianRandomization` R package easily implements this [@MR1; @MR2; @MR3] 
+
+## Example
+
+[@MR1]:
+
+* **Exposure** ($X$): high-density lipoprotein cholesterol (log HDL-c)
+* **Outcome** ($Y$): coronary heart disease (CHD)
+* **Instrumental variables**: 28 genetic SNPs known to be associated with HDL
+
+. . .
+
+```{r}
+#| echo: true
+library(MendelianRandomization);
+
+# Example input data
+mr.input <- mr_input(
+    bx = hdlc, # slopes of SNPs on continuous exposure
+    bxse = hdlcse, # standard errors
+    by = chdlodds, # log odds ratios of SNPs on binary outcome
+    byse = chdloddsse # standard errors of log odds ratios
+    );
+mr.input;
+
+```
+
+## IVW meta analysis
+
+. . .
+
+```{r}
+#| echo: true
+res <- mr_ivw(mr.input);
+res;
+```
+
+* A 1 unit increase in log HDL-c is causally associated with **`r round(exp(res@Estimate), 2)`** times lower odds of CHD (95% CI: **`r paste(round(exp(c(res@CILower, res@CIUpper)), 2), collapse = ' to ')`**, p = **`r round(res@Pvalue, 5)`**).
+
+* The significant Heterogeneity test means there is heterogenity in the effect sizes between the SNPs.  Ideally the SNPs should have consistent effects.. sensitivity analyses are used to address inconsistent effects.
+
+
+## Sensitivity analyses using Robust MR
+
+> **Since it is unlikely that all genetic variants
+will be valid instrumental variables**, several robust methods have been proposed. We compare nine robust methods for MR based on summary data...Our recommendation for investigators is to perform a variety of robust methods that operate in different ways and rely on different assumptions for valid inferences to assess the reliability of MR analyses. [@robustMR]
+
+## Robust MR in R
+
+* The `MendelianRandomization` R package implements many methods for robust MR
+
+* `mr_allmethods()`: variations of 3 robust methods
+
+. . .
+
+```{r}
+#| echo: true
+mr_allmethods(mr.input);
+```
+
+* Contrary to its name `mr_allmethods` does not implement all of the MR methods in the package.. Other robust methods include:
+   + `mr_cML`: robust to all 3 IV assumptions
+   + `mr_divw`
+   + `mr_pivw`
+   + `mr_mvgmm`
+   + `mr_conmix`
+
+# Sensitivity analyses
+
+
+## Variant specific analyses
+
+. . .
+
+```{r}
+#| echo: true
+mr_forest(mr.input);
+```
+
+## Leave one out sensitivity analysis
+
+. . .
+
+```{r}
+#| echo: true
+# currently only supports the IVW method
+mr_loo(mr.input);
+```
+
+
+## Comparing causal estimates from multiple methods
+
+. . .
+
+```{r}
+#| echo: true
+mr_forest(
+    mr.input,
+    snp_estimates = FALSE,
+    methods = c('ivw', 'median', 'wmedian', 'egger', 'maxlik', 'mbe', 'conmix')
+    );
+```
+
+
+## Extensions in `MendelianRandomization` R package
+
+* The traditional IVW method assumes that the SNPs are independent, which is often not the case in practice
+* Extensions account for [correlation structure among SNPs](https://amymariemason.github.io/MR/articles/Univariable_MR_Methods.html#ivw-method-example-with-correlated-variants)
+* [Multivariable MR methods](https://amymariemason.github.io/MR/articles/Multivariable_MR_Methods.html) allow for multiple exposures to be included in the analysis
+
+## Cancer applications
+
+* Is exercise causally associated with decreased cancer risk? [@exercise1; @exercise2]
+* Explore causal factors for epigenetic age acceleration (when epigenetic age differs from biologic age) [@epi-age-MR]
+
+. . .
+
+**Other ideas for how MR could be used in our lab?**
+
+## Summary
+
+* **Instrumental variable analysis (`r colorize('IVA')`)**: causal inference with observational data 
+* **Mendelian randomization (`r colorize('MR')`)**: particular type of IVA where the IV are germline genetic variant(s)
+* MR has 4 main assumptions
+   + Best practice recommends running multiple "robust MR methods" as sensitivity analyses [@MR-guidelines]
+   + `MendelianRandomization` R package implements many of these robust methods
+* If you have **`r colorize('patient-level data')`** then you can use **`r colorize('two-stage regression')`** methods (`ivtools` package) OR the inverse-variance-weighting (**`r colorize('IVW')`**) meta analysis approach that only requires summary statistics (they are asymptotically equivalent for continuous outcomes)
+* If you only have **`r colorize('summary-level data')`** (regression coeffs and standard errors of SNPs *vs.* exposure and SNPs *vs.* outcome) then you can use the **`r colorize('IVW')`** meta analysis method or any other method in the `MendelianRandomization` R package
+
+
+
+
+
+# References

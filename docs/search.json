@@ -1,0 +1,142 @@
+[
+  {
+    "objectID": "index.html#background",
+    "href": "index.html#background",
+    "title": "Mendelian Randomization in R",
+    "section": "Background",
+    "text": "Background\n\nGoal: causal inference for exposure and outcome in observational study\nProblem: there are unmeasured confounders:"
+  },
+  {
+    "objectID": "index.html#instrumental-variable-analysis-iva",
+    "href": "index.html#instrumental-variable-analysis-iva",
+    "title": "Mendelian Randomization in R",
+    "section": "Instrumental Variable Analysis (IVA)",
+    "text": "Instrumental Variable Analysis (IVA)\n\nMethod for doing causal inference in observational study\nMendelian Randomization is a particular form of IVA where IVs are germline genetic variant(s)\n\n\n3 Conditions of an IV:\n\nIV is associated with the exposure\n\nNo unmeasured confounders of the IV-outcome relationship\n\nIV does not affect the outcome other than through the exposure and does not affect any other trait that has a downstream effect on the outcome of interest.\n\n\n\n\nFinally, MR makes one more assumption:\n\nChanges in the genetic IV have equivalent effects to changes in the exposure through environmental or drug intervention: gene–environment equivalence\n\n\nSanderson, Eleanor, et al. “Mendelian randomization.” Nature reviews Methods primers 2.1 (2022): 6."
+  },
+  {
+    "objectID": "index.html#intuition",
+    "href": "index.html#intuition",
+    "title": "Mendelian Randomization in R",
+    "section": "Intuition",
+    "text": "Intuition\n\nIf the genetic variant(s) \\(G\\) cause the exposure (\\(G \\rightarrow X\\)) and cause the outcome only through the (\\(G \\rightarrow X \\rightarrow Y\\)), then the exposure has a causal effect on the the outcome!\nThe above holds even if there are unmeasured confounders (\\(U\\)) of \\(X\\)-\\(Y\\) relationship\n\n\n\nThe key to “causal” is the fact that the genetic variant(s) are randomly assigned at conception, so they are not confounded by other factors that may affect the exposure and outcome.. similar to RCT.\n\n\n\nGo, Tae-Hwa, and Dae Ryong Kang. “Basic concepts of a mendelian randomization approach.” Cardiovascular Prevention and Pharmacotherapy 2.1 (2020): 24-30"
+  },
+  {
+    "objectID": "index.html#relation-to-rct",
+    "href": "index.html#relation-to-rct",
+    "title": "Mendelian Randomization in R",
+    "section": "Relation to RCT",
+    "text": "Relation to RCT\n\n\nSanderson, Eleanor, et al. “Mendelian randomization.” Nature reviews Methods primers 2.1 (2022): 6."
+  },
+  {
+    "objectID": "index.html#data-used-for-mr",
+    "href": "index.html#data-used-for-mr",
+    "title": "Mendelian Randomization in R",
+    "section": "Data used for MR",
+    "text": "Data used for MR\n\nPatient-level data\n\n\nIf you have patient-level genetic, exposure & outcome data, then you can use a simple 2-stage regression approach\n\n\nSummary-level data:\n\n\nGWAS summary stats (regression coefficient and standard error) are publicly available for thousands of phenotypes\nIf you can find GWAS summary stats for a set of variants associated with your exposure and corresponding summary stats for association with outcome, then you can use a meta-analysis approach to estimate the causal effect"
+  },
+  {
+    "objectID": "index.html#stage-regression",
+    "href": "index.html#stage-regression",
+    "title": "Mendelian Randomization in R",
+    "section": "2-stage regression",
+    "text": "2-stage regression\n\n\\(X\\): exposure\n\\(Y\\): outcome\n\\(Z\\): genetic variant(s) (instrumental variable)\n\\(L\\): optional covariates to improve precision\n\n\nModel to predict exposure\n\n\n\\[\nX = \\pi_0 + \\pi_{Z}Z + \\pi_{L}L +  \\epsilon_X\n\\]\n  Obtain predicted exposure \\(\\hat{X}\\)\n\nModel to predict outcome\n\n\n\n\\[\nY = \\beta_0 + \\beta_X\\hat{X} + \\beta_{L}L + \\epsilon_Y\n\\]\n\n\\(\\hat{\\beta}_X\\) is the estimated causal effect of the exposure on the outcome. If \\(\\beta_X\\) p-value &lt; 0.05, then evidence for a causal association between \\(X\\) and \\(Y\\).\nCan’t use traditional standard errors/CIs/pvalues. Modified versions are used to account for the uncertainty in \\(\\hat{X}\\).\nThe above approach is unbiased for linear regression but biased for non-linear regression (e.g. logistic reg or CoxPH). Bias adjustments have been developed for these models."
+  },
+  {
+    "objectID": "index.html#example",
+    "href": "index.html#example",
+    "title": "Mendelian Randomization in R",
+    "section": "Example",
+    "text": "Example\n\nStudy for the effect of Vitamin D on mortality (Martinussen, Nørbo Sørensen, and Vansteelandt 2019)\nivtools R package (Sjolander and Martinussen 2019)\n\n\n\nlibrary(survival);\nlibrary(ivtools);\ndata(VitD);\nVitD$vitd.zscore &lt;- as.numeric(scale(VitD$vitd));\nhead(VitD);\n\n  age filaggrin  vitd     time death vitd.zscore\n1  41         0  53.3 16.16220     0  -0.4207751\n2  62         0  26.4 16.06470     0  -1.4157752\n3  41         0  47.7 16.34796     0  -0.6279127\n4  42         0 103.5 16.32993     0   1.4360651\n5  52         0  79.0 16.74289     0   0.5298383\n6  62         0  70.1 15.17891     0   0.2006375\n\n\n\nage: age at baseline\nfilaggrin: binary indicator of whether the subject has mutations in the filaggrin gene\nvitd.zscore: z-score of baseline vitamin D level\ntime: followup time (years)\ndeath: whether the subject died during follow-up"
+  },
+  {
+    "objectID": "index.html#stage-regression-models",
+    "href": "index.html#stage-regression-models",
+    "title": "Mendelian Randomization in R",
+    "section": "2-stage regression models",
+    "text": "2-stage regression models\n\nNotation:\n\nExposure model (fitX.LZ): predict exposure X with instrumental variable(s) Z and covariates L\nOutcome model (fitT.LX): predict time-to-event outcome T with exposure X and covariates L\n\n\nExposure model:\n\n\n\n\nfitX.LZ &lt;- glm(\n    formula = vitd.zscore ~ age + filaggrin,\n    data = VitD,\n    family = gaussian\n    );\ngtsummary::tbl_regression(fitX.LZ);\n\n\n\n\n\n\n\nCharacteristic\nBeta\n95% CI\np-value\n\n\n\n\nage\n-0.01\n-0.01, 0.00\n0.006\n\n\nfilaggrin\n0.21\n0.06, 0.35\n0.006\n\n\n\nAbbreviation: CI = Confidence Interval\n\n\n\n\n\n\n\n\n\nThe genetic instrumental variable is significantly associated with the exposure (vitamin D)\n\n\nOutcome model:\n\n\n\n\nfitT.LX &lt;- coxph(\n    formula = Surv(time, death) ~ age + vitd.zscore,\n    data = VitD\n    );\ngtsummary::tbl_regression(fitT.LX , exponentiate = TRUE);\n\n\n\n\n\n\n\nCharacteristic\nHR\n95% CI\np-value\n\n\n\n\nage\n1.10\n1.09, 1.11\n&lt;0.001\n\n\nvitd.zscore\n0.82\n0.75, 0.90\n&lt;0.001\n\n\n\nAbbreviations: CI = Confidence Interval, HR = Hazard Ratio\n\n\n\n\n\n\n\n\n\nThe exposure (vitamin D) is significantly associated with the outcome (mortality), however, there may be unobserved confounders \\(\\rightarrow\\) we will use IVA to try and deal with this.\n\n\nCombine the exposure and outcome models to estimate the causal effect:\n\n\nSince we have a time-to-event outcome, use ivcoxph(). For continuous or binary outcomes, use ivglm().\n\n\n\n\nfit.iva &lt;- ivtools::ivcoxph(\n    estmethod = 'ts',\n    fitX.LZ = fitX.LZ,\n    fitT.LX = fitT.LX,\n    data = VitD,\n    ctrl = TRUE # reduced bias\n    );\n\n# Make table of results\ntab &lt;- data.frame(summary(fit.iva)$coef, check.names = FALSE);\ntab$HR &lt;- round(exp(tab$Estimate), 2);\ntab$pvalue &lt;- ifelse(tab$`Pr(&gt;|z|)` &lt; 0.001, '&lt;0.001', round(tab$`Pr(&gt;|z|)`, 3));\nci &lt;- round(exp(confint(fit.iva)), 2);\ntab &lt;- cbind(tab, ci);\ntab$feature &lt;- rownames(tab);\n\ngt::gt(tab[, c('feature', 'HR', '2.5 %', '97.5 %', 'pvalue')]);\n\n\n\n\n\n\n\nfeature\nHR\n2.5 %\n97.5 %\npvalue\n\n\n\n\nage\n1.10\n1.08\n1.11\n&lt;0.001\n\n\nvitd.zscore\n0.21\n0.04\n1.09\n0.063\n\n\nR\n0.83\n0.75\n0.91\n&lt;0.001\n\n\n\n\n\n\n\n\nA 1 standard deviation increase in vitamin D is causally associated with 0.21 times less risk of death (95% CI: 0.04 to 1.09, p = 0.063)."
+  },
+  {
+    "objectID": "index.html#how-do-we-choose-genetic-instrumental-variables",
+    "href": "index.html#how-do-we-choose-genetic-instrumental-variables",
+    "title": "Mendelian Randomization in R",
+    "section": "How do we choose genetic instrumental variables?",
+    "text": "How do we choose genetic instrumental variables?\n\nIdentify GWAS SNPs from public databases that are associated with the exposure (\\(p &lt; 5.0 * 10^{–8}\\))\nUsing public databases, we can obtain regression coefficients and standard errors for the set of genetic IVs for their association with the exposure (\\(X\\)) and outcome (\\(Y\\))\nThen we can use “inverse variance weighting” (IVW) meta analysis methods to combine all the info and estimate the causal effect of \\(X\\) on \\(Y\\)"
+  },
+  {
+    "objectID": "index.html#inverse-variance-weighting-ivw-meta-analysis-method",
+    "href": "index.html#inverse-variance-weighting-ivw-meta-analysis-method",
+    "title": "Mendelian Randomization in R",
+    "section": "Inverse Variance Weighting (IVW) meta analysis method",
+    "text": "Inverse Variance Weighting (IVW) meta analysis method\n\n(Sanderson et al. 2022):\n\n\n\n\n\n\n\n\nThe MendelianRandomization R package easily implements this (Yavorska and Burgess 2017; Broadbent et al. 2020; Patel et al. 2023)"
+  },
+  {
+    "objectID": "index.html#example-1",
+    "href": "index.html#example-1",
+    "title": "Mendelian Randomization in R",
+    "section": "Example",
+    "text": "Example\n(Yavorska and Burgess 2017):\n\nExposure (\\(X\\)): high-density lipoprotein cholesterol (log HDL-c)\nOutcome (\\(Y\\)): coronary heart disease (CHD)\nInstrumental variables: 28 genetic SNPs known to be associated with HDL\n\n\n\nlibrary(MendelianRandomization);\n\n# Example input data\nmr.input &lt;- mr_input(\n    bx = hdlc, # slopes of SNPs on continuous exposure\n    bxse = hdlcse, # standard errors\n    by = chdlodds, # log odds ratios of SNPs on binary outcome\n    byse = chdloddsse # standard errors of log odds ratios\n    );\nmr.input;\n\n      SNP exposure.beta exposure.se outcome.beta outcome.se\n1   snp_1        0.0020       0.004       0.0677     0.0286\n2   snp_2        0.0050       0.004      -0.1625     0.0300\n3   snp_3        0.0030       0.004      -0.1054     0.0310\n4   snp_4        0.0010       0.003      -0.0619     0.0243\n5   snp_5        0.0110       0.003      -0.0834     0.0222\n6   snp_6        0.0310       0.006      -0.1278     0.0667\n7   snp_7       -0.0030       0.004      -0.0408     0.0373\n8   snp_8       -0.0070       0.006       0.0770     0.0543\n9   snp_9       -0.0210       0.004       0.1570     0.0306\n10 snp_10        0.0180       0.003      -0.0305     0.0236\n11 snp_11       -0.0170       0.003       0.0100     0.0277\n12 snp_12       -0.0470       0.005       0.1823     0.0403\n13 snp_13        0.0220       0.004      -0.0408     0.0344\n14 snp_14       -0.0290       0.004       0.1989     0.0335\n15 snp_15        0.0160       0.003       0.0100     0.0378\n16 snp_16        0.0340       0.004       0.0488     0.0292\n17 snp_17        0.0350       0.003       0.0100     0.0253\n18 snp_18        0.0190       0.004      -0.0408     0.0319\n19 snp_19        0.0280       0.004      -0.0305     0.0316\n20 snp_20        0.0001       0.003      -0.0408     0.0241\n21 snp_21        0.0160       0.003      -0.0202     0.0285\n22 snp_22        0.0050       0.003      -0.0619     0.0217\n23 snp_23       -0.0100       0.004       0.0296     0.0298\n24 snp_24       -0.0230       0.003       0.0677     0.0239\n25 snp_25        0.0120       0.003      -0.0726     0.0220\n26 snp_26        0.0180       0.003      -0.0726     0.0246\n27 snp_27       -0.0060       0.003       0.0000     0.0255\n28 snp_28        0.0040       0.006       0.0198     0.0647"
+  },
+  {
+    "objectID": "index.html#ivw-meta-analysis",
+    "href": "index.html#ivw-meta-analysis",
+    "title": "Mendelian Randomization in R",
+    "section": "IVW meta analysis",
+    "text": "IVW meta analysis\n\n\nres &lt;- mr_ivw(mr.input);\nres;\n\n\nInverse-variance weighted method\n(variants uncorrelated, random-effect model)\n\nNumber of Variants : 28 \n\n------------------------------------------------------------------\n Method Estimate Std Error  95% CI        p-value\n    IVW   -2.375     0.678 -3.704, -1.047   0.000\n------------------------------------------------------------------\nResidual standard error =  2.284 \nHeterogeneity test statistic (Cochran's Q) = 140.9022 on 27 degrees of freedom, (p-value = 0.0000). I^2 = 80.8%. \nF statistic = 27.6. \n\n\n\nA 1 unit increase in log HDL-c is causally associated with 0.09 times lower odds of CHD (95% CI: 0.02 to 0.35, p = 0.00046).\nThe significant Heterogeneity test means there is heterogenity in the effect sizes between the SNPs. Ideally the SNPs should have consistent effects.. sensitivity analyses are used to address inconsistent effects."
+  },
+  {
+    "objectID": "index.html#sensitivity-analyses-using-robust-mr",
+    "href": "index.html#sensitivity-analyses-using-robust-mr",
+    "title": "Mendelian Randomization in R",
+    "section": "Sensitivity analyses using Robust MR",
+    "text": "Sensitivity analyses using Robust MR\n\nSince it is unlikely that all genetic variants will be valid instrumental variables, several robust methods have been proposed. We compare nine robust methods for MR based on summary data…Our recommendation for investigators is to perform a variety of robust methods that operate in different ways and rely on different assumptions for valid inferences to assess the reliability of MR analyses. (Slob and Burgess 2020)"
+  },
+  {
+    "objectID": "index.html#robust-mr-in-r",
+    "href": "index.html#robust-mr-in-r",
+    "title": "Mendelian Randomization in R",
+    "section": "Robust MR in R",
+    "text": "Robust MR in R\n\nThe MendelianRandomization R package implements many methods for robust MR\nmr_allmethods(): variations of 3 robust methods\n\n\n\nmr_allmethods(mr.input);\n\n                    Method Estimate Std Error 95% CI         P-value\n             Simple median   -2.952     0.834  -4.586 -1.318   0.000\n           Weighted median   -1.822     0.593  -2.985 -0.659   0.002\n Penalized weighted median   -1.981     0.614  -3.184 -0.778   0.001\n                                                                    \n                       IVW   -2.375     0.678  -3.704 -1.047   0.000\n             Penalized IVW   -2.963     0.504  -3.952 -1.975   0.000\n                Robust IVW   -2.471     0.930  -4.295 -0.648   0.008\n      Penalized robust IVW   -2.937     0.469  -3.856 -2.019   0.000\n                                                                    \n                  MR-Egger   -0.492     1.057  -2.563  1.580   0.642\n               (intercept)   -0.043     0.019  -0.081 -0.005   0.026\n        Penalized MR-Egger   -0.068     0.772  -1.582  1.446   0.930\n               (intercept)   -0.045     0.012  -0.070 -0.021   0.000\n           Robust MR-Egger   -0.344     1.692  -3.660  2.972   0.839\n               (intercept)   -0.044     0.022  -0.088 -0.001   0.046\n Penalized robust MR-Egger    0.039     0.967  -1.858  1.935   0.968\n               (intercept)   -0.047     0.015  -0.076 -0.018   0.001\n\n\n\nContrary to its name mr_allmethods does not implement all of the MR methods in the package.. Other robust methods include:\n\nmr_cML: robust to all 3 IV assumptions\nmr_divw\nmr_pivw\nmr_mvgmm\nmr_conmix"
+  },
+  {
+    "objectID": "index.html#variant-specific-analyses",
+    "href": "index.html#variant-specific-analyses",
+    "title": "Mendelian Randomization in R",
+    "section": "Variant specific analyses",
+    "text": "Variant specific analyses\n\n\nmr_forest(mr.input);"
+  },
+  {
+    "objectID": "index.html#leave-one-out-sensitivity-analysis",
+    "href": "index.html#leave-one-out-sensitivity-analysis",
+    "title": "Mendelian Randomization in R",
+    "section": "Leave one out sensitivity analysis",
+    "text": "Leave one out sensitivity analysis\n\n\n# currently only supports the IVW method\nmr_loo(mr.input);"
+  },
+  {
+    "objectID": "index.html#comparing-causal-estimates-from-multiple-methods",
+    "href": "index.html#comparing-causal-estimates-from-multiple-methods",
+    "title": "Mendelian Randomization in R",
+    "section": "Comparing causal estimates from multiple methods",
+    "text": "Comparing causal estimates from multiple methods\n\n\nmr_forest(\n    mr.input,\n    snp_estimates = FALSE,\n    methods = c('ivw', 'median', 'wmedian', 'egger', 'maxlik', 'mbe', 'conmix')\n    );"
+  },
+  {
+    "objectID": "index.html#extensions-in-mendelianrandomization-r-package",
+    "href": "index.html#extensions-in-mendelianrandomization-r-package",
+    "title": "Mendelian Randomization in R",
+    "section": "Extensions in MendelianRandomization R package",
+    "text": "Extensions in MendelianRandomization R package\n\nThe traditional IVW method assumes that the SNPs are independent, which is often not the case in practice\nExtensions account for correlation structure among SNPs\nMultivariable MR methods allow for multiple exposures to be included in the analysis"
+  },
+  {
+    "objectID": "index.html#cancer-applications",
+    "href": "index.html#cancer-applications",
+    "title": "Mendelian Randomization in R",
+    "section": "Cancer applications",
+    "text": "Cancer applications\n\nIs exercise causally associated with decreased cancer risk? (Papadimitriou et al. 2020; Watts et al. 2024)\nExplore causal factors for epigenetic age acceleration (when epigenetic age differs from biologic age) (Ying et al. 2024)\n\n\nOther ideas for how MR could be used in our lab?"
+  },
+  {
+    "objectID": "index.html#summary",
+    "href": "index.html#summary",
+    "title": "Mendelian Randomization in R",
+    "section": "Summary",
+    "text": "Summary\n\nInstrumental variable analysis (IVA): causal inference with observational data\nMendelian randomization (MR): particular type of IVA where the IV are germline genetic variant(s)\nMR has 4 main assumptions\n\nBest practice recommends running multiple “robust MR methods” as sensitivity analyses (Burgess et al. 2023)\nMendelianRandomization R package implements many of these robust methods\n\nIf you have patient-level data then you can use two-stage regression methods (ivtools package) OR the inverse-variance-weighting (IVW) meta analysis approach that only requires summary statistics (they are asymptotically equivalent for continuous outcomes)\nIf you only have summary-level data (regression coeffs and standard errors of SNPs vs. exposure and SNPs vs. outcome) then you can use the IVW meta analysis method or any other method in the MendelianRandomization R package"
+  }
+]
