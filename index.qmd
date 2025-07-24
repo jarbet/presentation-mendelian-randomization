@@ -74,7 +74,7 @@ Sanderson, Eleanor, et al. "Mendelian randomization." Nature reviews Methods pri
 
 ## Intuition
 
--   If the genetic variant(s) $G$ cause the exposure ($G \rightarrow X$) and cause the outcome only through the ($G \rightarrow X \rightarrow Y$), then the exposure has a causal effect on the the outcome!
+-   If the genetic variant(s) $G$ cause the exposure ($G \rightarrow X$) and cause the outcome only through the exposure ($G \rightarrow X \rightarrow Y$), then the exposure has a causal effect on the the outcome!
 
 -   The above holds even if there are unmeasured confounders ($U$) of $X$-$Y$ relationship
 
@@ -261,7 +261,7 @@ gt::gt(tab[, c('feature', 'HR', '2.5 %', '97.5 %', 'pvalue')]);
 
 [@MR1]:
 
-* **Exposure** ($X$): high-density lipoprotein cholesterol (log HDL-c)
+* **Exposure** ($X$): high-density lipoprotein chol. (log HDL-c)
 * **Outcome** ($Y$): coronary heart disease (CHD)
 * **Instrumental variables**: 28 genetic SNPs known to be associated with HDL
 
