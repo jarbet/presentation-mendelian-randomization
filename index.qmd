@@ -39,6 +39,8 @@ if (knitr::is_latex_output()) {
 
     ![](images/clipboard-852610954.png){.nostretch width='400px' height='400px' fig-align="center"}
 
+* [Correlation does not imply causation](https://www.tylervigen.com/spurious-correlations)
+
 ## Instrumental Variable Analysis (IVA)
 
 -   Method for doing causal inference in observational study
@@ -74,7 +76,9 @@ Sanderson, Eleanor, et al. "Mendelian randomization." Nature reviews Methods pri
 
 ## Intuition
 
--   If the genetic variant(s) $G$ cause the exposure ($G \rightarrow X$) and cause the outcome only through the exposure ($G \rightarrow X \rightarrow Y$), then the exposure has a causal effect on the the outcome!
+. . .
+
+If genetic variant(s) $G$ cause exposure ($G \rightarrow X$) and cause the outcome only through the exposure ($G \rightarrow X \rightarrow Y$), then the exposure has a causal effect on the the outcome!
 
 -   The above holds even if there are unmeasured confounders ($U$) of $X$-$Y$ relationship
 

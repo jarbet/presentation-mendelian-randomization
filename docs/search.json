@@ -4,7 +4,7 @@
     "href": "index.html#background",
     "title": "Mendelian Randomization in R",
     "section": "Background",
-    "text": "Background\n\nGoal: causal inference for exposure and outcome in observational study\nProblem: there are unmeasured confounders:"
+    "text": "Background\n\nGoal: causal inference for exposure and outcome in observational study\nProblem: there are unmeasured confounders:\n\n\n\n\n\nCorrelation does not imply causation"
   },
   {
     "objectID": "index.html#instrumental-variable-analysis-iva",
@@ -18,7 +18,7 @@
     "href": "index.html#intuition",
     "title": "Mendelian Randomization in R",
     "section": "Intuition",
-    "text": "Intuition\n\nIf the genetic variant(s) \\(G\\) cause the exposure (\\(G \\rightarrow X\\)) and cause the outcome only through the exposure (\\(G \\rightarrow X \\rightarrow Y\\)), then the exposure has a causal effect on the the outcome!\nThe above holds even if there are unmeasured confounders (\\(U\\)) of \\(X\\)-\\(Y\\) relationship\n\n\n\nThe key to “causal” is the fact that the genetic variant(s) are randomly assigned at conception, so they are not confounded by other factors that may affect the exposure and outcome.. similar to RCT.\n\n\n\nGo, Tae-Hwa, and Dae Ryong Kang. “Basic concepts of a mendelian randomization approach.” Cardiovascular Prevention and Pharmacotherapy 2.1 (2020): 24-30"
+    "text": "Intuition\n\nIf genetic variant(s) \\(G\\) cause exposure (\\(G \\rightarrow X\\)) and cause the outcome only through the exposure (\\(G \\rightarrow X \\rightarrow Y\\)), then the exposure has a causal effect on the the outcome!\n\nThe above holds even if there are unmeasured confounders (\\(U\\)) of \\(X\\)-\\(Y\\) relationship\n\n\n\nThe key to “causal” is the fact that the genetic variant(s) are randomly assigned at conception, so they are not confounded by other factors that may affect the exposure and outcome.. similar to RCT.\n\n\n\nGo, Tae-Hwa, and Dae Ryong Kang. “Basic concepts of a mendelian randomization approach.” Cardiovascular Prevention and Pharmacotherapy 2.1 (2020): 24-30"
   },
   {
     "objectID": "index.html#relation-to-rct",
